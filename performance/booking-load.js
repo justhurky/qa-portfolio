@@ -5,6 +5,7 @@ import { Trend, Rate } from 'k6/metrics';
 const BASE_URL = __ENV.SUT_BASE_URL || 'http://localhost:3000';
 const OPERATOR = { 'X-Api-Key': 'operator-key', 'Content-Type': 'application/json' };
 const VIEWER = { 'X-Api-Key': 'viewer-key' };
+const BOOKING_RESPONSES = http.expectedStatuses(201, 409);
 
 const createDuration = new Trend('booking_create_duration', true);
 const listDuration = new Trend('booking_list_duration', true);
@@ -58,7 +59,7 @@ export function browse() {
 }
 
 export function book() {
-  const offsetMinutes = 60 + Math.floor(Math.random() * 20000);
+  const offsetMinutes = 60 + Math.floor(Math.random() * 40000);
   const startsAt = new Date(Date.now() + offsetMinutes * 60000).toISOString();
   const endsAt = new Date(Date.now() + (offsetMinutes + 30) * 60000).toISOString();
 
@@ -67,7 +68,7 @@ export function book() {
     purpose: `Load generated pass ${__VU}-${__ITER}`,
     startsAt,
     endsAt
-  }), { headers: OPERATOR });
+  }), { headers: OPERATOR, responseCallback: BOOKING_RESPONSES });
 
   createDuration.add(response.timings.duration);
   capacityRejections.add(response.status === 409);

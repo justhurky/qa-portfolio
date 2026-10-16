@@ -147,6 +147,11 @@ concurrency suite in [`python-tests/`](../python-tests), **UI** the Playwright s
 | PERF-02 | Creating bookings under a ramp to 5 users | — | Load, ramp | PERF |
 | PERF-03 | Every response is 201 or an explained 409 | REQ-29 | Correctness under load | PERF |
 
+A 409 from a saturated station is a correct answer, not a failure, so the booking request declares
+`expectedStatuses(201, 409)`. Without that, `http_req_failed` counts every legitimate capacity
+rejection as an error and the threshold fails for the wrong reason, which is exactly what happened
+on the first CI run.
+
 Thresholds: failed requests under 1 percent, overall p95 under 300 ms and p99 under 800 ms, list
 p95 under 150 ms, create p95 under 250 ms, and check pass rate above 99 percent.
 
