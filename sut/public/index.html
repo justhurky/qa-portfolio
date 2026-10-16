@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ground Station Booking</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header>
+  <h1>Ground Station Booking</h1>
+  <div class="session">
+    <label for="api-key">API key</label>
+    <input id="api-key" data-testid="api-key" type="password" autocomplete="off"
+           placeholder="operator-key">
+    <button id="sign-in" data-testid="sign-in" type="button">Sign in</button>
+    <span id="session-user" data-testid="session-user" class="muted">not signed in</span>
+    <button id="sign-out" data-testid="sign-out" type="button" hidden>Sign out</button>
+  </div>
+</header>
+
+<p id="message" data-testid="message" role="status" hidden></p>
+
+<main hidden id="workspace" data-testid="workspace">
+  <section aria-labelledby="new-booking-heading">
+    <h2 id="new-booking-heading">New booking</h2>
+    <form id="booking-form" data-testid="booking-form" novalidate>
+      <div class="field">
+        <label for="station">Station</label>
+        <select id="station" data-testid="station" required></select>
+      </div>
+      <div class="field">
+        <label for="purpose">Purpose</label>
+        <input id="purpose" data-testid="purpose" type="text" required
+               minlength="3" maxlength="200" placeholder="Routine housekeeping pass">
+      </div>
+      <div class="field">
+        <label for="starts-at">Starts at</label>
+        <input id="starts-at" data-testid="starts-at" type="datetime-local" required>
+      </div>
+      <div class="field">
+        <label for="ends-at">Ends at</label>
+        <input id="ends-at" data-testid="ends-at" type="datetime-local" required>
+      </div>
+      <div class="field">
+        <label for="priority">Priority</label>
+        <select id="priority" data-testid="priority">
+          <option value="ROUTINE">Routine</option>
+          <option value="PRIORITY">Priority</option>
+          <option value="EMERGENCY">Emergency</option>
+        </select>
+      </div>
+      <button id="submit-booking" data-testid="submit-booking" type="submit">Request slot</button>
+    </form>
+  </section>
+
+  <section aria-labelledby="bookings-heading">
+    <h2 id="bookings-heading">Bookings</h2>
+    <div class="filters">
+      <label for="state-filter">State</label>
+      <select id="state-filter" data-testid="state-filter">
+        <option value="">All</option>
+        <option value="REQUESTED">Requested</option>
+        <option value="CONFIRMED">Confirmed</option>
+        <option value="COMPLETED">Completed</option>
+        <option value="CANCELLED">Cancelled</option>
+      </select>
+      <button id="refresh" data-testid="refresh" type="button">Refresh</button>
+    </div>
+    <table data-testid="bookings-table">
+      <thead>
+        <tr>
+          <th scope="col">Station</th>
+          <th scope="col">Purpose</th>
+          <th scope="col">Window</th>
+          <th scope="col">Priority</th>
+          <th scope="col">State</th>
+          <th scope="col">Requested by</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="bookings-body" data-testid="bookings-body"></tbody>
+    </table>
+    <p id="empty-state" data-testid="empty-state" hidden>No bookings match the current filter.</p>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

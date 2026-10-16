@@ -1,0 +1,12 @@
+node_modules/
+target/
+__pycache__/
+.pytest_cache/
+results/
+test-results/
+playwright-report/
+performance/summary.json
+*.log
+.idea/
+.vscode/
+.DS_Store
