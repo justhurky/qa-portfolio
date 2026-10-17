@@ -1,7 +1,7 @@
 # Requirements under test
 
-The system under test is the Ground Station Booking API in [`sut/`](../sut): operators reserve
-antenna time slots at ground stations, supervisors approve them. Every requirement below has an
+The system under test is the Ground Station Booking service in [`src/GroundStation.Api`](../src/GroundStation.Api):
+operators reserve antenna time slots at ground stations, supervisors approve them. Every requirement below has an
 identifier, and every test case in [test-cases.md](test-cases.md) traces back to one.
 
 These requirements are the specification the tests were designed from. Where the implementation
@@ -72,7 +72,7 @@ expected result.
 | ID | Requirement |
 |----|-------------|
 | REQ-60 | A body that is not valid JSON is answered with 400 `MALFORMED_JSON`, never with a stack trace. |
-| REQ-61 | A request body above 64 KiB is rejected with 413 `PAYLOAD_TOO_LARGE`. |
+| REQ-61 | A request body above 64 KiB is rejected before it is processed. |
 | REQ-62 | Static file serving must not escape the public directory. |
 | REQ-63 | Text supplied by a user is rendered as text in the web interface and never executed as markup. |
 | REQ-64 | An unexpected server error is answered with a generic 500 body that leaks no internal detail. |

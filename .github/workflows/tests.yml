@@ -10,129 +10,89 @@ permissions:
   contents: read
 
 env:
-  SUT_BASE_URL: http://127.0.0.1:3000
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
 
 jobs:
-  api:
-    name: api tests (java, rest assured)
+  unit:
+    name: unit tests (xUnit)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          node-version: '22'
-
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: temurin
-          cache: maven
-
-      - name: start the system under test
-        run: |
-          node sut/server.js &
-          for i in $(seq 1 30); do
-            curl -sf "$SUT_BASE_URL/api/health" && break
-            sleep 1
-          done
+          dotnet-version: '9.0.x'
 
       - name: run the gating suite
-        run: ./mvnw -B test -Dsut.baseUrl=$SUT_BASE_URL
-        working-directory: api-tests
+        run: dotnet test tests/GroundStation.UnitTests --filter "Category!=KnownDefect" --logger "trx;LogFileName=unit.trx" --results-directory results
 
       - name: run the known defect suite
-        id: known
         continue-on-error: true
-        run: ./mvnw -B test -Pknown-defects -Dtest='*Test#emergencyMayNotBeBackdated+leadTimeAtTheExactBoundaryIsAccepted+oversizedBodyIsRefused' -DfailIfNoSpecifiedTests=false -Dsut.baseUrl=$SUT_BASE_URL
-        working-directory: api-tests
-
-      - name: report the known defects
-        if: always()
-        run: |
-          echo "### Known defects" >> $GITHUB_STEP_SUMMARY
-          echo "The three cases below fail on purpose and are documented in docs/defects." >> $GITHUB_STEP_SUMMARY
-          echo "- DEF-001 an emergency booking can be backdated" >> $GITHUB_STEP_SUMMARY
-          echo "- DEF-002 the 15 minute lead time boundary is unreachable" >> $GITHUB_STEP_SUMMARY
-          echo "- DEF-003 an oversized body drops the connection instead of answering 413" >> $GITHUB_STEP_SUMMARY
+        run: dotnet test tests/GroundStation.UnitTests --filter "Category=KnownDefect" --logger "trx;LogFileName=unit-known-defects.trx" --results-directory results
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: api-test-reports
-          path: api-tests/target/surefire-reports
+          name: unit-results
+          path: results
 
-  contract:
-    name: contract and concurrency tests (python, pytest)
+  integration:
+    name: integration tests (xUnit, in-process host)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          node-version: '22'
+          dotnet-version: '9.0.x'
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - name: run the gating suite
+        run: dotnet test tests/GroundStation.ApiTests --filter "Category!=KnownDefect" --logger "trx;LogFileName=integration.trx" --results-directory results
 
-      - name: install test dependencies
-        run: pip install -r python-tests/requirements.txt
+      - name: run the known defect suite
+        continue-on-error: true
+        run: dotnet test tests/GroundStation.ApiTests --filter "Category=KnownDefect" --logger "trx;LogFileName=integration-known-defects.trx" --results-directory results
 
-      - name: start the system under test
+      - name: report the open defects
+        if: always()
         run: |
-          node sut/server.js &
-          for i in $(seq 1 30); do
-            curl -sf "$SUT_BASE_URL/api/health" && break
-            sleep 1
-          done
-
-      - name: run pytest
-        run: pytest -v --junit-xml=results/junit.xml
-        working-directory: python-tests
+          echo "### Open defects" >> $GITHUB_STEP_SUMMARY
+          echo "These cases fail on purpose and are documented in docs/defects." >> $GITHUB_STEP_SUMMARY
+          echo "- DEF-001 an emergency booking can be backdated" >> $GITHUB_STEP_SUMMARY
+          echo "- DEF-002 the 15 minute lead time boundary is unreachable over HTTP" >> $GITHUB_STEP_SUMMARY
+          echo "- DEF-004 a malformed body bypasses the error contract" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "DEF-003 was fixed and its regression test runs in the gate." >> $GITHUB_STEP_SUMMARY
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: contract-test-reports
-          path: python-tests/results
+          name: integration-results
+          path: results
 
   ui:
-    name: end to end tests (playwright)
+    name: end to end tests (Selenium)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          node-version: '22'
+          dotnet-version: '9.0.x'
 
-      - name: install playwright
-        run: |
-          npm ci || npm install
-          npx playwright install --with-deps chromium
-        working-directory: ui-tests
+      - uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
 
-      - name: start the system under test
-        run: |
-          node sut/server.js &
-          for i in $(seq 1 30); do
-            curl -sf "$SUT_BASE_URL/api/health" && break
-            sleep 1
-          done
-
-      - name: run playwright
-        run: npx playwright test
-        working-directory: ui-tests
+      - name: run the browser suite
+        run: dotnet test tests/GroundStation.UiTests --logger "trx;LogFileName=ui.trx" --results-directory results
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
-          path: |
-            ui-tests/playwright-report
-            ui-tests/results
-            ui-tests/test-results
+          name: ui-results
+          path: results
 
   performance:
     name: performance baseline (k6)
@@ -140,9 +100,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          node-version: '22'
+          dotnet-version: '9.0.x'
 
       - name: install k6
         run: |
@@ -151,17 +111,19 @@ jobs:
 
       - name: start the system under test
         run: |
-          node sut/server.js &
-          for i in $(seq 1 30); do
-            curl -sf "$SUT_BASE_URL/api/health" && break
+          dotnet run --project src/GroundStation.Api --urls http://127.0.0.1:5000 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:5000/api/health && break
             sleep 1
           done
 
       - name: run the load profile
-        run: k6 run --summary-export=performance/summary.json performance/booking-load.js
+        env:
+          SUT_BASE_URL: http://127.0.0.1:5000
+        run: k6 run --summary-export=results/k6-summary.json performance/booking-load.js
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: performance-summary
-          path: performance/summary.json
+          path: results
